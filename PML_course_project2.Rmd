@@ -1,0 +1,71 @@
+---
+title: "Practical Machine Learning Project"
+author: "Leonel E. Lerebours"
+date: "2022-09-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### SETUP  (must download the data first )
+
+```{r a}
+library(lattice)
+library(ggplot2)
+library(caret)
+library(kernlab)
+library(rattle)
+library(corrplot)
+set.seed(1234)
+
+traincsv <- read.csv("training.csv")
+testcsv <- read.csv("test.csv")
+
+```
+
+
+### Removing unnecessary variables. Starting with N/A variables.
+```{r b}
+
+traincsv <- traincsv[,colMeans(is.na(traincsv)) < .9] #removing mostly na columns
+traincsv <- traincsv[,-c(1:7)] #removing metadata which is irrelevant to the outcome
+traincsv <- traincsv[,colMeans(is.na(traincsv)) < .9] #removing mostly na columns
+traincsv <- traincsv[,-c(1:7)] #removing metadata which is irrelevant to the outcome
+nvz <- nearZeroVar(traincsv)
+traincsv <- traincsv[,-nvz]
+```
+
+
+### Creating and Testing the Models
+
+- Set up control for training to use 2-fold cross validation.
+```{r c}
+inTrain <- createDataPartition(y=traincsv$classe, p=0.7, list=F)
+train <- traincsv[inTrain,]
+valid <- traincsv[-inTrain,]
+
+control <- trainControl(method="cv", number=2, verboseIter=F)
+
+
+```
+
+### Decision Tree
+```{r d}
+mod_trees <- train(classe~., data=train, method="rpart", trControl = control, tuneLength = 5)
+fancyRpartPlot(mod_trees$finalModel)
+pred_trees <- predict(mod_trees, valid)
+cmtrees <- confusionMatrix(pred_trees, factor(valid$classe))
+cmtrees
+```
+
+### Random Forest
+```{r e}
+mod_rf <- train(classe~., data=train, method="rf", trControl = control, tuneLength = 5)
+pred_rf <- predict(mod_rf, valid)
+cmrf <- confusionMatrix(pred_rf, factor(valid$classe))
+cmrf
+
+```
+
+The best model is the Random Forest model, with  accuracy of 99% .
